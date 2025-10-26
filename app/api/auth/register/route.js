@@ -1,5 +1,7 @@
+import { emailVerificationLink } from "@/email/emailVerification";
 import { connectDB } from "@/lib/databaseConnection";
-import { response } from "@/lib/helperFunction";
+import { catchError, response } from "@/lib/helperFunction";
+import { sendMail } from "@/lib/sendMail";
 import { loginSchema } from "@/lib/zodSchema";
 import UserModel from "@/models/User.model";
 import { SignJWT } from "jose";
@@ -42,5 +44,21 @@ export async function POST(request) {
       .setExpirationTime("1h")
       .setProtectedHeader({ alg: "HS256" })
       .sign(secret);
-  } catch (error) {}
+
+    await sendMail(
+      "Email Verification",
+      email,
+      emailVerificationLink(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/verifyEmail/${token}`
+      )
+    );
+
+    return response(
+      true,
+      200,
+      "Registration successful. Please verify your email."
+    );
+  } catch (error) {
+    catchError(error);
+  }
 }

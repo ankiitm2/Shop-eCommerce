@@ -30,7 +30,7 @@ const LoginPage = () => {
       email: true,
     })
     .extend({
-      password: z.string().min(1, "Password is required"),
+      password: z.string().min(3, "Password is required"),
     });
 
   const form = useForm({
