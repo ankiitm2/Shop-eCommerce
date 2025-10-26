@@ -9,6 +9,8 @@ import { SignJWT } from "jose";
 export async function POST(request) {
   try {
     await connectDB();
+
+    // Create a schema for registration (only name, email, password)
     const validationSchema = loginSchema.pick({
       name: true,
       email: true,
@@ -17,35 +19,28 @@ export async function POST(request) {
 
     const payload = await request.json();
 
+    // Zod's parse() throws an error if validation fails
     const validatedData = validationSchema.parse(payload);
 
-    if (!validatedData.success) {
-      return response(
-        false,
-        400,
-        "Invalid or missing input field.",
-        validatedData.error
-      );
-    }
-
-    const { name, email, password } = validatedData.data;
+    // Remove .data - the parsed data is returned directly
+    const { name, email, password } = validatedData;
 
     const checkUser = await UserModel.exists({ email });
     if (checkUser) {
-      return response(true, 409, "User already exists with this email.");
+      return response(false, 409, "User already exists with this email.");
     }
 
-    const newRegestrtion = new UserModel({ name, email, password });
-    await newRegestrtion.save();
+    const newRegistration = new UserModel({ name, email, password });
+    await newRegistration.save();
 
     const secret = new TextEncoder().encode(process.env.SECRET_KEY);
-    const token = await new SignJWT({ userId: newRegestrtion._id })
+    const token = await new SignJWT({ userId: newRegistration._id })
       .setIssuedAt()
       .setExpirationTime("1h")
       .setProtectedHeader({ alg: "HS256" })
       .sign(secret);
 
-    await sendMail(
+    const mailResult = await sendMail(
       "Email Verification",
       email,
       emailVerificationLink(
@@ -53,12 +48,16 @@ export async function POST(request) {
       )
     );
 
+    if (!mailResult.success) {
+      console.error("Failed to send verification email:", mailResult.error);
+    }
+
     return response(
       true,
       200,
       "Registration successful. Please verify your email."
     );
   } catch (error) {
-    catchError(error);
+    return catchError(error);
   }
 }

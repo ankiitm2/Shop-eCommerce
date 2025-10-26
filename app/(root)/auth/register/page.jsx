@@ -21,6 +21,7 @@ import { FaRegEyeSlash, FaRegEye } from "react-icons/fa";
 import Link from "next/link";
 import z from "zod";
 import { WEBSITE_LOGIN } from "@/routes/WebsiteRoute";
+import axios from "axios";
 
 const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
@@ -52,13 +53,20 @@ const RegisterPage = () => {
   });
 
   const handleRegisterSubmit = async (values) => {
-    setLoading(true);
     try {
-      console.log(values);
-      // Add your registration logic here
-      // await registerUser(values);
+      setLoading(true);
+      const { data: registerResponse } = await axios.post(
+        "/api/auth/register",
+        values
+      );
+      if (!registerResponse.success) {
+        throw new Error(registerResponse.message);
+      }
+
+      form.reset();
+      alert(registerResponse.message);
     } catch (error) {
-      console.error("Registration error:", error);
+      alert(error.message);
     } finally {
       setLoading(false);
     }
